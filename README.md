@@ -172,16 +172,18 @@ Không mở bằng Excel (tránh lỗi Permission) → dùng Notepad hoặc VS C
 ## 📌 Test 7: Đăng xuất & Timeout
 
 ### Bước 1:
-Tại file client.py sửa 
+Tại file client.py sửa :
+```
 elif m_type == "keep_alive":
     #pass
     server_conn.sendall(serialize("keep_alive_ack", my_name).encode('utf-8'))
-
+```
 -> thành:
+```
 elif m_type == "keep_alive":
     pass
     #server_conn.sendall(serialize("keep_alive_ack", my_name).encode('utf-8'))
-
+```
 Tại Client A:
 
 ```bash
