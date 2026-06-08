@@ -1,0 +1,27 @@
+timestamp,username,action,ip
+2026-06-07 00:03:06,Alice,sign_in,127.0.0.1
+2026-06-07 00:03:21,Bob,sign_in,127.0.0.1
+2026-06-07 00:04:36,Bob,sign_out,127.0.0.1
+2026-06-07 00:05:48,Bob,sign_in,127.0.0.1
+2026-06-07 00:06:01,Bob,unexpected_disconnect,127.0.0.1
+2026-06-07 00:07:11,Alice,sign_in,127.0.0.1
+2026-06-07 00:24:23,A,sign_in,127.0.0.1
+2026-06-07 00:26:00,C,sign_in,127.0.0.1
+2026-06-07 00:28:15,C,unexpected_disconnect,127.0.0.1
+2026-06-07 00:28:23,A,unexpected_disconnect,127.0.0.1
+2026-06-07 00:42:06,Hoa,sign_in,127.0.0.1
+2026-06-07 00:46:58,Hoa,sign_in,127.0.0.1
+2026-06-07 00:47:29,Binh,sign_in,127.0.0.1
+2026-06-07 00:49:12,Binh,sign_out,127.0.0.1
+2026-06-07 00:52:40,Hoa,unexpected_disconnect,127.0.0.1
+2026-06-07 00:53:15,Hoa,sign_in,127.0.0.1
+2026-06-07 00:53:44,Binh,sign_in,127.0.0.1
+2026-06-07 00:55:17,Binh,sign_out,127.0.0.1
+2026-06-07 00:55:58,Hoa,unexpected_disconnect,127.0.0.1
+2026-06-07 01:00:18,Hoa,sign_in,127.0.0.1
+2026-06-07 01:00:34,Hoa,sign_out,127.0.0.1
+2026-06-07 01:00:51,Hoa,sign_in,127.0.0.1
+2026-06-07 01:01:04,Hoa,unexpected_disconnect,127.0.0.1
+2026-06-07 01:03:30,Hoa,sign_in,127.0.0.1
+2026-06-07 01:03:49,Hoa,timeout_disconnect,127.0.0.1
+2026-06-07 01:03:49,Hoa,unexpected_disconnect,127.0.0.1

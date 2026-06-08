@@ -1,0 +1,7 @@
+{
+  "type": "sign_in | sign_out | keep_alive | keep_alive_ack | client_status | status_update | chat_req | chat_res | chat",
+  "username": "tên_người_gửi",
+  "ip": "ip_của_người_gửi",
+  "port": "port_p2p_của_người_gửi",
+  "payload": "nội_dung_tin_nhắn_hoặc_thông_báo"
+}
