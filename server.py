@@ -12,50 +12,53 @@ clients_lock = threading.Lock()
 
 def broadcast(msg, exclude_conn=None):
     encoded_msg = msg.encode('utf-8')
-    # VÁ LỖI: Chỉ dùng Lock để copy danh sách kết nối, tránh làm nghẽn toàn bộ server
     with clients_lock:
         target_conns = [info["conn"] for info in clients.values() if info["conn"] != exclude_conn]
-        
     for conn in target_conns:
         try:
             conn.sendall(encoded_msg)
-        except:
-            pass
+        except: pass
+
+def broadcast_online_list():
+    """Hàm mới: Gửi danh sách user đang online cho TẤT CẢ mọi người"""
+    with clients_lock:
+        online_users = [f"{k} ({v['ip']}:{v['port']})" for k, v in clients.items()]
+    list_str = ",".join(online_users) if online_users else ""
+    broadcast(serialize("client_status", "SERVER", payload=list_str))
 
 def heartbeat_manager():
     while True:
         time.sleep(HEARTBEAT_INTERVAL)
         to_remove = []
-        
         with clients_lock:
             for user, info in clients.items():
                 if time.time() - info["last_seen"] > TIMEOUT_LIMIT:
-                    to_remove.append((user, info["ip"])) # Lưu IP để log
+                    to_remove.append((user, info["ip"]))
                 else:
                     try:
                         info["conn"].sendall(serialize("keep_alive", "SERVER").encode('utf-8'))
-                        print(f"[KEEP-ALIVE] Đã gửi Ping tới -> {user}") # HIỂN THỊ LOG GỬI
+                        print(f"[KEEP-ALIVE] Đã gửi Ping tới -> {user}")
                     except:
                         to_remove.append((user, info["ip"]))
         
         for user, ip in to_remove:
-            print(f"[TIMEOUT] remove {user}")
             with clients_lock:
                 if user in clients:
-                    clients[user]["conn"].close()
+                    try:
+                        clients[user]["conn"].close()
+                    except: pass
                     clients.pop(user)
-                    
-            # --- CẬP NHẬT DATABASE ---
-            db.set_user_offline(user)
+            db.update_user_status(user, None, None, 'offline')
             db.log_event(user, "timeout_disconnect", ip)
-            # -------------------------
-            
             broadcast(serialize("status_update", "SERVER", payload=f"[-] {user} đã offline (timeout)"))
+            
+            # Cập nhật danh sách mới cho những người còn lại
+            broadcast_online_list() 
 
 def handle_client(conn, addr):
     username = None
     ip = addr[0]
-    m_type = None # VÁ LỖI: Khởi tạo biến mặc định để tránh lỗi UnboundLocalError khi client rớt mạng sớm
+    m_type = None
     buffer = ""
     try:
         while True:
@@ -73,56 +76,34 @@ def handle_client(conn, addr):
 
                 if m_type == "sign_in":
                     password = msg.get("password", "")
-                    
-                    # 1. KIỂM TRA XÁC THỰC TỪ AUTH.PY
                     is_valid, reason = auth.check_login(user, password)
-                    
                     if not is_valid:
-                        print(f"[AUTH] {user} login FAIL ({reason})")
-                        response = {"status": "fail", "reason": reason}
-                        conn.sendall(serialize("sign_in_response", "SERVER", payload=response).encode('utf-8'))
-                        return # Từ chối và ngắt kết nối ngay lập tức
+                        conn.sendall(serialize("sign_in_response", "SERVER", payload={"status": "fail", "reason": reason}).encode('utf-8'))
+                        return
 
-                    # 2. KIỂM TRA ĐĂNG NHẬP TRÙNG
                     with clients_lock:
                         if user in clients:
-                            print(f"[AUTH] {user} login FAIL (Đang online nơi khác)")
-                            response = {"status": "fail", "reason": "Tài khoản đang online ở một thiết bị khác!"}
-                            conn.sendall(serialize("sign_in_response", "SERVER", payload=response).encode('utf-8'))
+                            conn.sendall(serialize("sign_in_response", "SERVER", payload={"status": "fail", "reason": "Tài khoản đang online nơi khác!"}).encode('utf-8'))
                             return
-                        
-                        # 3. NẾU VƯỢ QUA HẾT -> CHO PHÉP LOGIN
-                        clients[user] = {
-                            "conn": conn,
-                            "ip": msg["ip"],
-                            "port": msg["port"],
-                            "last_seen": time.time()
-                        }
+                        clients[user] = {"conn": conn, "ip": msg["ip"], "port": msg["port"], "last_seen": time.time()}
                     
                     username = user
-                    print(f"[AUTH] {username} login SUCCESS")
-                    
-                    # Gửi response thành công cho Client
                     conn.sendall(serialize("sign_in_response", "SERVER", payload={"status": "success"}).encode('utf-8'))
                     
-                    # Cập nhật Database trạng thái
-                    db.add_or_update_user(username, msg["ip"], msg["port"])
+                    db.update_user_status(username, msg["ip"], msg["port"], 'online')
                     db.log_event(username, "sign_in", msg["ip"])
                     
-                    print(f"[CONNECT] {username} connected")
-                    online_users = [f"{k} ({v['ip']}:{v['port']})" for k, v in clients.items()]
-                    conn.sendall(serialize("client_status", "SERVER", payload=",".join(online_users)).encode('utf-8'))
                     broadcast(serialize("status_update", "SERVER", payload=f"[+] {username} vừa online"), exclude_conn=conn)
                     
+                    # Gửi danh sách mới cho toàn mạng (bao gồm cả người vừa đăng nhập)
+                    broadcast_online_list() 
+                    
                 elif m_type == "keep_alive_ack":
-                    print(f"[KEEP-ALIVE] Đã nhận ACK từ <- {username}") # HIỂN THỊ LOG NHẬN
+                    print(f"[KEEP-ALIVE] Đã nhận ACK từ <- {username}")
                     with clients_lock:
                         if username in clients:
                             clients[username]["last_seen"] = time.time()
-                    
-                    # --- CẬP NHẬT DATABASE ---
-                    db.update_last_seen(username)
-                    # -------------------------
+                    db.update_user_status(username, None, None, 'online')
 
                 elif m_type == "chat_req":
                     target = msg["payload"]
@@ -134,38 +115,32 @@ def handle_client(conn, addr):
                             conn.sendall(serialize("error", "SERVER", payload=f"Không tìm thấy {target}").encode('utf-8'))
 
                 elif m_type == "sign_out":
-                    print(f"[DISCONNECT] {username} signed out")
-                    return # Kích hoạt khối finally bên dưới
+                    return
 
     except Exception as e:
-        print(f"[ERROR] {addr}: {e}")
+        pass
     finally:
         if username:
             with clients_lock:
                 if username in clients:
-                    ip = clients[username]["ip"] # Lấy lại IP trước khi xoá
+                    ip = clients[username]["ip"]
                     clients.pop(username)
-            
-            # --- CẬP NHẬT DATABASE ---
-            db.set_user_offline(username)
+            db.update_user_status(username, None, None, 'offline')
             db.log_event(username, "sign_out" if m_type == "sign_out" else "unexpected_disconnect", ip)
-            # -------------------------
-            
             broadcast(serialize("status_update", "SERVER", payload=f"[-] {username} đã offline"))
+            
+            # Cập nhật danh sách mới khi có người thoat
+            broadcast_online_list() 
         conn.close()
 
 def server_console():
-    """Luồng xử lý lệnh gõ vào cửa sổ Terminal của Server"""
     while True:
         try:
             cmd = input()
-            if cmd == "/show_db":
-                db.show_database()
-        except EOFError:
-            break
+            if cmd == "/show_db": db.show_database()
+        except EOFError: break
 
 def main():
-    # Khởi tạo DB (reset online status, tạo file nếu thiếu)
     db.init_db()
     auth.init_auth_db()
     
@@ -173,22 +148,16 @@ def main():
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind((SERVER_HOST, SERVER_PORT))
     server.listen(5)
+    print(f"=== SERVER RUNNING AT {SERVER_HOST}:{SERVER_PORT} ===")
     
-    print(f"=== SERVER CHẠY TẠI {SERVER_HOST}:{SERVER_PORT} ===")
-    print("Gõ lệnh '/show_db' để xem Database In-Memory hiện tại.\n")
-    
-    # Chạy luồng Heartbeat
     threading.Thread(target=heartbeat_manager, daemon=True).start()
-    
-    # Chạy luồng Server Console Input
     threading.Thread(target=server_console, daemon=True).start()
     
     while True:
         try:
             conn, addr = server.accept()
             threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()
-        except KeyboardInterrupt:
-            break
+        except KeyboardInterrupt: break
 
 if __name__ == "__main__":
     main()
