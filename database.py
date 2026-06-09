@@ -4,8 +4,8 @@ import os
 from datetime import datetime
 import threading
 
-USERS_FILE = 'users.csv'
-LOGS_FILE = 'logs.csv'
+USERS_FILE = 'data/users.csv'
+LOGS_FILE = 'data/logs.csv'
 db_lock = threading.Lock()
 
 def _get_now():

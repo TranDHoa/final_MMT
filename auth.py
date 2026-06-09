@@ -2,7 +2,7 @@
 import csv
 import os
 
-AUTH_FILE = 'accounts.csv'
+AUTH_FILE = 'data/accounts.csv'
 MAX_FAILED_ATTEMPTS = 3
 
 failed_attempts = {}

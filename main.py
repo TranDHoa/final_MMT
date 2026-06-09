@@ -3,8 +3,8 @@ import sys
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import QMessageBox
 
-from login import Ui_port
-from chat import Ui_MainWindow
+from UI.login import Ui_port
+from UI.chat import Ui_MainWindow
 from client_core import NetworkManager
 class ChatController(QtWidgets.QMainWindow):
     def __init__(self, network_mgr):
