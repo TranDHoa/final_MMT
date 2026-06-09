@@ -1,75 +1,101 @@
-🚀 Hệ Thống Chat Client-Server với P2P Messaging
-📌 Giới thiệu
+## 🚀 Quy Trình Khởi Chạy Hệ Thống Kiểm Thử
 
-Đây là hệ thống chat hoạt động theo mô hình Client-Server kết hợp P2P (Peer-to-Peer).
-Server chịu trách nhiệm xác thực, quản lý trạng thái người dùng và signaling, trong khi dữ liệu chat được truyền trực tiếp giữa các client.
+Để kiểm thử kịch bản hoạt động đa người dùng trên cùng một máy nội bộ (`127.0.0.1`), hãy thực hiện tuần tự các bước sau:
 
-⚙️ Kiến trúc hệ thống
-Server (server.py)
-Xác thực tài khoản
-Quản lý trạng thái ONLINE/OFFLINE
-Gửi danh sách user online (broadcast)
-Giám sát kết nối (Keep-alive / Heartbeat)
-Client (main.py)
-Giao diện đăng nhập & chat
-Kết nối server để xác thực
-Thiết lập kết nối P2P với client khác
-Gửi/nhận tin nhắn trực tiếp
-🧱 Cơ sở dữ liệu (CSV)
+### Bước 1: Khởi động Máy chủ trung tâm (Server)
 
-Hệ thống sử dụng file CSV đơn giản:
+Mở một cửa sổ Terminal mới và chạy lệnh:
 
-accounts.csv → lưu tài khoản mẫu
-users.csv → trạng thái người dùng
-logs.csv → log hoạt động hệ thống
-🚀 Hướng dẫn khởi chạy hệ thống
-🔹 Bước 1: Khởi động Server
+```bash
 python server.py
-Server chạy tại: 127.0.0.1:9999
-Tự động tạo database nếu chưa tồn tại
-🔹 Bước 2: Khởi chạy Client 1 (Hoa)
+
+```
+
+* Sau khi chạy, Server sẽ lắng nghe tại cổng mặc định `9999`.
+* Hệ thống sẽ tự động khởi tạo các file cơ sở dữ liệu: `accounts.csv` (chứa tài khoản mẫu), `users.csv` (theo dõi trạng thái) và `logs.csv`.
+
+### Bước 2: Khởi chạy Client thứ nhất (Tài khoản Hoa)
+
+Mở một cửa sổ Terminal độc lập thứ hai, chạy lệnh:
+
+```bash
 python main.py
 
-Thông tin đăng nhập:
+```
 
-Username: Hoa
-Password: 123456
-🔹 Bước 3: Khởi chạy Client 2 (Bình)
+* Form đăng nhập hiện lên, ô nhập Port đã được ẩn tự động hóa.
+* Nhập tài khoản: **Username:** `Hoa` | **Password:** `123456`.
+* Bấm **Login**. Hệ thống tự động cấp cổng và chuyển vào màn hình Chat. Trên danh sách `ONLINE` bên trái sẽ hiển thị tên của Hoa cùng địa chỉ mạng.
+
+### Bước 3: Khởi chạy Client thứ hai (Tài khoản Bình)
+
+Mở tiếp một cửa sổ Terminal độc lập thứ ba, chạy lệnh:
+
+```bash
 python main.py
 
-Thông tin đăng nhập:
+```
 
-Username: Binh
-Password: abc123
-🔹 Bước 4: Chat P2P
-Nhấp đúp vào user trong danh sách ONLINE
-Hệ thống hiển thị:
-[!] Đã kết nối P2P với <username>
-Tin nhắn được gửi trực tiếp (không qua server)
-🧪 Test Cases
-🔐 1. Authentication
-TC-AUTH-01: Đăng nhập đúng → Thành công
-TC-AUTH-02: Bỏ trống → Hiển thị cảnh báo
-TC-AUTH-03: Sai 3 lần → Khóa tài khoản tạm thời
-TC-AUTH-04: Login trùng → Bị từ chối
-🔄 2. Session & Heartbeat
-TC-SESS-01: Keep-alive hoạt động
-[KEEP-ALIVE] Ping -> Hoa
-[KEEP-ALIVE] ACK <- Hoa
-TC-SESS-02: Đóng app → logout ngay
-TC-SESS-03: Mất kết nối → timeout sau 15s
-💬 3. P2P Messaging
-TC-P2P-01: Không cho self-chat
-TC-P2P-02: Client mất kết nối → không crash app
-📊 Debug & Monitoring
+* Nhập tài khoản: **Username:** `Binh` | **Password:** `abc123`.
+* Bấm **Login**. Hệ thống tự động chuyển vào màn hình Chat.
+* Ngay lập tức, cả hai màn hình của Hoa và Bình đều tự động cập nhật danh sách hiển thị tên của nhau nhờ cơ chế Signaling Broadcast từ Server.
 
-Trên server terminal:
+### Bước 4: Tiến hành Chat P2P trực tiếp
 
+1. Từ màn hình của Hoa, hãy **nhấp đúp chuột** vào tên `Binh` trong danh sách `ONLINE` bên trái.
+2. Hệ thống sẽ hiển thị dòng chữ màu xanh: `[!] Đã kết nối P2P với Binh. Bạn có thể bắt đầu nhắn tin.`
+3. Nhập tin nhắn vào ô chữ phía dưới và nhấn **Enter** hoặc bấm nút **Send**. Tin nhắn sẽ truyền thẳng tới màn hình của Bình mà hoàn toàn không đi qua Server.
+
+---
+
+## 🧪 Các Kịch Bản Kiểm Thử Cần Thực Hiện (Test Cases)
+
+Hệ thống đã được thiết kế tối ưu để vượt qua các bộ test case cốt lõi sau:
+
+### 1. Nhóm Đăng nhập & Xác thực
+
+* **TC-AUTH-01 (Đăng nhập thành công):** Điền đúng thông tin tài khoản mẫu, hệ thống truy cập mượt mà.
+* **TC-AUTH-02 (Kiểm tra bỏ trống):** Để trống trường thông tin, ứng dụng hiển thị hộp thoại thông báo yêu cầu nhập đủ.
+* **TC-AUTH-03 (Chống Brute-force):** Điền sai mật khẩu 3 lần liên tiếp, tài khoản bị khóa tạm thời, hệ thống từ chối đăng nhập ở lần thứ 4 cho đến khi Server reset.
+* **TC-AUTH-04 (Chống Đăng nhập trùng):** Nếu tài khoản `Hoa` đang online, một máy khác cố tình đăng nhập tài khoản `Hoa` sẽ bị Server từ chối để bảo vệ phiên kết nối.
+
+### 2. Nhóm Heartbeat & Đồng bộ Trạng thái
+
+* **TC-SESS-01 (Giám sát Keep-Alive):** Khi Client giữ kết nối, kiểm tra Terminal của Server sẽ liên tục in log dạng:
+```plaintext
+[KEEP-ALIVE] Đã gửi Ping tới -> Hoa
+[KEEP-ALIVE] Đã nhận ACK từ <- Hoa
+
+```
+
+
+* **TC-SESS-02 (Đăng xuất chủ động):** Bấm nút `X` tắt cửa sổ chat, Client lập tức gửi gói tin `sign_out`, Server xóa session và cập nhật danh sách offline cho các máy còn lại ngay lập tức.
+* **TC-SESS-03 (Xử lý mất mạng/Đột ngột tắt ứng dụng):** Tắt đột ngột app (bằng cách tắt Terminal client). Sau 15 giây không nhận được phản hồi ACK, Server tự động kích hoạt bộ đếm Timeout, ngắt kết nối và giải phóng tài nguyên.
+
+### 3. Nhóm Truyền tải dữ liệu P2P
+
+* **TC-P2P-01 (Chống tự chat):** Nhấp đúp vào chính tên mình trong danh sách online, hệ thống hiển thị thông báo ngăn chặn hành vi.
+* **TC-P2P-02 (Xử lý ngắt P2P cô lập):** Khi Hoa và Bình đang chat P2P, nếu Bình tắt ứng dụng, Hoa gửi tin nhắn tiếp theo sẽ nhận được thông báo lỗi cô lập luồng socket thay vì làm sập toàn bộ ứng dụng (`main.py` vẫn giữ nguyên hoạt động).
+
+---
+
+## 📊 Công cụ kiểm tra dữ liệu ngầm trên Server
+
+Tại cửa sổ Terminal của Server, bạn có thể gõ lệnh trực tiếp sau để kiểm tra trạng thái lưu trữ của file CSV trong bộ nhớ đệm:
+
+```bash
 /show_db
 
-Hiển thị:
+```
 
-USERNAME | IP         | PORT  | STATUS | LAST_SEEN
--------------------------------------------------
-Hoa      | 127.0.0.1 | 51234 | online | ...
-Binh     | 127.0.0.1 | 51238 | online | ...
+Màn hình sẽ hiển thị bảng dữ liệu trực quan:
+
+```plaintext
+=================================================================
+USERNAME        | IP              | PORT   | STATUS   | LAST_SEEN
+-----------------------------------------------------------------
+Hoa             | 127.0.0.1       | 51234  | online   | 2026-06-10 00:45:12
+Binh            | 127.0.0.1       | 51238  | online   | 2026-06-10 00:45:15
+=================================================================
+
+```
