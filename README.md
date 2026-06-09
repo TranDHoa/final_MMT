@@ -1,234 +1,75 @@
-# 🧪 KỊCH BẢN TEST END-TO-END HỆ THỐNG CHAT CLIENT-SERVER
+🚀 Hệ Thống Chat Client-Server với P2P Messaging
+📌 Giới thiệu
 
-## 📌 Test 1: Khởi động Server và nạp Database
+Đây là hệ thống chat hoạt động theo mô hình Client-Server kết hợp P2P (Peer-to-Peer).
+Server chịu trách nhiệm xác thực, quản lý trạng thái người dùng và signaling, trong khi dữ liệu chat được truyền trực tiếp giữa các client.
 
-### Bước 1:
+⚙️ Kiến trúc hệ thống
+Server (server.py)
+Xác thực tài khoản
+Quản lý trạng thái ONLINE/OFFLINE
+Gửi danh sách user online (broadcast)
+Giám sát kết nối (Keep-alive / Heartbeat)
+Client (main.py)
+Giao diện đăng nhập & chat
+Kết nối server để xác thực
+Thiết lập kết nối P2P với client khác
+Gửi/nhận tin nhắn trực tiếp
+🧱 Cơ sở dữ liệu (CSV)
 
-Tại Terminal 1, chạy lệnh:
+Hệ thống sử dụng file CSV đơn giản:
 
-```bash
+accounts.csv → lưu tài khoản mẫu
+users.csv → trạng thái người dùng
+logs.csv → log hoạt động hệ thống
+🚀 Hướng dẫn khởi chạy hệ thống
+🔹 Bước 1: Khởi động Server
 python server.py
-```
+Server chạy tại: 127.0.0.1:9999
+Tự động tạo database nếu chưa tồn tại
+🔹 Bước 2: Khởi chạy Client 1 (Hoa)
+python main.py
 
-### ✅ Kết quả mong đợi:
+Thông tin đăng nhập:
 
-* Server in ra:
-
-  * `[AUTH] Đã tạo database xác thực...` *(nếu chạy lần đầu)*
-  * `[DB] Hệ thống CSDL đã sẵn sàng. Đã reset toàn bộ user về OFFLINE.`
-  * `=== SERVER CHẠY TẠI 127.0.0.1:9999 ===`
-
----
-
-## 📌 Test 2: Đăng nhập thành công (Valid Login)
-
-### Bước 1:
-
-Tại Terminal 2:
-
-```bash
-python client.py
-```
-
-### Bước 2: Nhập thông tin
-
-```
-Username: A
+Username: Hoa
 Password: 123456
-Port: 5001
-```
+🔹 Bước 3: Khởi chạy Client 2 (Bình)
+python main.py
 
-### ✅ Kết quả mong đợi:
+Thông tin đăng nhập:
 
-* Client:
+Username: Binh
+Password: abc123
+🔹 Bước 4: Chat P2P
+Nhấp đúp vào user trong danh sách ONLINE
+Hệ thống hiển thị:
+[!] Đã kết nối P2P với <username>
+Tin nhắn được gửi trực tiếp (không qua server)
+🧪 Test Cases
+🔐 1. Authentication
+TC-AUTH-01: Đăng nhập đúng → Thành công
+TC-AUTH-02: Bỏ trống → Hiển thị cảnh báo
+TC-AUTH-03: Sai 3 lần → Khóa tài khoản tạm thời
+TC-AUTH-04: Login trùng → Bị từ chối
+🔄 2. Session & Heartbeat
+TC-SESS-01: Keep-alive hoạt động
+[KEEP-ALIVE] Ping -> Hoa
+[KEEP-ALIVE] ACK <- Hoa
+TC-SESS-02: Đóng app → logout ngay
+TC-SESS-03: Mất kết nối → timeout sau 15s
+💬 3. P2P Messaging
+TC-P2P-01: Không cho self-chat
+TC-P2P-02: Client mất kết nối → không crash app
+📊 Debug & Monitoring
 
-  * `[HỆ THỐNG] Xác thực thành công!`
-  * Hiển thị giao diện chat
+Trên server terminal:
 
-* Server log:
-
-  * `[AUTH] A login SUCCESS`
-  * `[CONNECT] A connected`
-
----
-
-## 📌 Test 3: Sai Password & Khóa tài khoản (Brute-force limit)
-
-### Bước 1:
-
-Tại Terminal 3:
-
-```bash
-python client.py
-```
-
-### Bước 2: Nhập sai thông tin
-
-```
-Username: B
-Password: sai_mat_khau
-Port: 5002
-```
-
-### ✅ Kết quả mong đợi (Lần 1 & 2):
-
-* Client:
-
-  * `[LỖI] Sai mật khẩu. Bạn còn x lần thử.`
-* Server:
-
-  * `[AUTH] B login FAIL (Sai mật khẩu...)`
-
-### Bước 3:
-
-Nhập sai đến lần thứ 3
-
-### ✅ Kết quả mong đợi (Lần 3):
-
-* Client:
-
-  * `[LỖI] Tài khoản đã bị khóa do nhập sai quá 3 lần.`
-
-📌 **Lưu ý:**
-Cơ chế khóa lưu trên RAM → restart server sẽ reset.
-
----
-
-
-## 📌 Test 5: Chat P2P & cập nhật trạng thái Real-time
-
-### Bước 1:
-
-Đăng nhập user C:
-
-```
-Username: C
-Password: pass123
-Port: 5003
-```
-
-### Bước 2:
-
-* Client A nhận:
-
-  * `[UPDATE] [+] C vừa online`
-
-### Bước 3:
-
-Tại Client A:
-
-```bash
-/chat C
-Xin chao C, toi la A day!
-```
-
-### ✅ Kết quả mong đợi:
-
-* Client C:
-
-  * `[CHAT] A -> You: Xin chao C, toi la A day!`
-* Server:
-
-  * ❌ Không in nội dung tin nhắn
-
----
-
-## 📌 Test 6: Kiểm tra Database
-
-### Bước 1:
-
-Tại Server:
-
-```bash
 /show_db
-```
 
-### ✅ Kết quả mong đợi:
+Hiển thị:
 
-* User A: `online`
-* User C: `online`
-* User B: `offline`
-
----
-
-### Bước 2:
-
-Mở file:
-
-```
-logs.csv
-```
-
-### ✅ Kết quả mong đợi:
-
-* Log thời gian `sign_in` của A và C
-* ❌ Không ghi login thất bại
-
-📌 **Lưu ý:**
-Không mở bằng Excel (tránh lỗi Permission) → dùng Notepad hoặc VS Code.
-
----
-
-## 📌 Test 7: Đăng xuất & Timeout
-
-### Bước 1:
-Tại file client.py sửa :
-```
-elif m_type == "keep_alive":
-    #pass
-    server_conn.sendall(serialize("keep_alive_ack", my_name).encode('utf-8'))
-```
--> thành:
-```
-elif m_type == "keep_alive":
-    pass
-    #server_conn.sendall(serialize("keep_alive_ack", my_name).encode('utf-8'))
-```
-Tại Client A:
-
-```bash
-/exit
-```
-
-### ✅ Kết quả mong đợi:
-
-* Client A thoát
-* Client C nhận:
-
-  * `[UPDATE] [-] A đã offline`
-* Server cập nhật DB + log
-
----
-
-### Bước 2:
-
-Tắt ngang Client C (bấm ❌)
-
-### ✅ Kết quả mong đợi:
-
-* Server gửi keep-alive
-* Sau ~15s:
-
-  * `[TIMEOUT] remove C`
-* DB cập nhật `offline`
-* Log:
-
-  * `unexpected_disconnect`
-
----
-
-# ✅ Tổng kết
-
-Hệ thống đã được test đầy đủ các chức năng:
-
-* Authentication (Login/Fail/Lock)
-* Session management
-* Duplicate login prevention
-* Real-time status update
-* P2P messaging
-* Database + logging
-* Timeout handling
-
----
-
-🚀 **Sẵn sàng deploy hoặc nâng cấp thêm (GUI, mã hóa, scaling server, etc.)**
+USERNAME | IP         | PORT  | STATUS | LAST_SEEN
+-------------------------------------------------
+Hoa      | 127.0.0.1 | 51234 | online | ...
+Binh     | 127.0.0.1 | 51238 | online | ...
